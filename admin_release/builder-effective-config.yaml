@@ -1,0 +1,21 @@
+directories:
+  output: .
+  buildResources: build
+appId: com.tomxtractor.keygen
+productName: TomWhatsBulk Keygen
+files:
+  - filter:
+      - main.js
+      - index.html
+win:
+  target: nsis
+  executableName: TomWhatsBulkKeygen
+nsis:
+  oneClick: true
+  perMachine: false
+  allowElevation: false
+  runAfterFinish: true
+  shortcutName: TomWhatsBulk Keygen
+  createDesktopShortcut: true
+  artifactName: tomwhats-keygen-setup.exe
+electronVersion: 39.8.5

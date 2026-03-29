@@ -1,0 +1,17 @@
+node_modules
+dist
+out
+.DS_Store
+.eslintcache
+*.log*
+*.exe
+*.blockmap
+.wwebjs_auth
+.wwebjs_cache
+release
+admin_release/dist
+admin_release/win-unpacked
+admin_release/node_modules
+admin_release/*.exe
+admin_release/*.blockmap
+build

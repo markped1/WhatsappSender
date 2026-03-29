@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TomWhatsBulk Keygen — Admin</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 28px;
+      width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    .logo { text-align: center; margin-bottom: 20px; }
+    .logo h1 { font-size: 13px; font-weight: 900; color: #25D366; letter-spacing: 3px; text-transform: uppercase; }
+    .logo p { font-size: 9px; color: #64748b; margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
+    .badge {
+      display: inline-block; background: #1e3a2f; color: #25D366;
+      font-size: 8px; font-weight: 700; padding: 2px 10px;
+      border-radius: 20px; text-transform: uppercase; letter-spacing: 1px; margin-top: 8px;
+    }
+    .db-badge {
+      display: inline-block; background: #1e2a3a; color: #3ECF8E;
+      font-size: 7px; font-weight: 700; padding: 2px 8px;
+      border-radius: 20px; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px;
+    }
+    label { display: block; font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; margin-top: 14px; }
+    input, select {
+      width: 100%; padding: 9px 12px;
+      background: #0f172a; border: 1px solid #334155; border-radius: 6px;
+      color: #e2e8f0; font-size: 11px; outline: none; transition: border-color 0.2s;
+    }
+    input:focus, select:focus { border-color: #25D366; }
+    select option { background: #1e293b; }
+    .btn {
+      width: 100%; padding: 11px; background: #25D366; color: #0f172a;
+      border: none; border-radius: 6px; font-size: 11px; font-weight: 900;
+      text-transform: uppercase; letter-spacing: 2px; cursor: pointer;
+      transition: background 0.2s; margin-top: 16px;
+    }
+    .btn:hover { background: #1ebe57; }
+    .btn:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+    .result {
+      margin-top: 16px; background: #0f172a; border: 1px solid #25D366;
+      border-radius: 8px; padding: 14px; display: none;
+    }
+    .key-text {
+      font-family: monospace; font-size: 18px; font-weight: 900;
+      color: #25D366; letter-spacing: 3px; text-align: center;
+      cursor: pointer; padding: 6px 0;
+    }
+    .copy-hint { font-size: 9px; color: #64748b; text-align: center; margin-top: 4px; }
+    .copied { color: #25D366 !important; }
+    .status { font-size: 10px; margin-top: 10px; text-align: center; min-height: 16px; }
+    .status.ok { color: #25D366; }
+    .status.err { color: #f87171; }
+    .keys-list { margin-top: 20px; border-top: 1px solid #334155; padding-top: 16px; }
+    .keys-list h3 { font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .key-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 10px; background: #0f172a; border-radius: 6px; margin-bottom: 6px;
+      font-size: 10px;
+    }
+    .key-row .k { font-family: monospace; color: #e2e8f0; letter-spacing: 1px; }
+    .key-row .machine { font-size: 8px; color: #64748b; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pill {
+      font-size: 7px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .pill.unused { background: #1e3a2f; color: #25D366; }
+    .pill.claimed { background: #1e2a3a; color: #60a5fa; }
+    .pill.disabled { background: #3a1e1e; color: #f87171; }
+    .revoke-btn {
+      font-size: 8px; color: #f87171; background: none; border: none;
+      cursor: pointer; padding: 2px 6px; border-radius: 4px;
+    }
+    .revoke-btn:hover { background: #3a1e1e; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <h1>TomWhatsBulk</h1>
+    <p>License Key Manager</p>
+    <span class="badge">🔐 Admin Panel</span>
+    <br>
+    <span class="db-badge">⚡ Supabase</span>
+  </div>
+
+  <!-- Supabase config -->
+  <script>
+    const SUPABASE = {
+      url: 'https://lcjrzupdwanyzuyshqul.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjanJ6dXBkd2FueXp1eXNocXVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MDEwMjcsImV4cCI6MjA5MDM3NzAyN30.GUVYLkK2691gIeV9s2Wfs1gEzY-KXjQxn1dcdm9Q_uA',
+    }
+    const BASE = `${SUPABASE.url}/rest/v1`
+    const HEADERS = {
+      apikey: SUPABASE.anonKey,
+      Authorization: `Bearer ${SUPABASE.anonKey}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    }
+  </script>
+
+  <label>Number of Keys to Generate</label>
+  <select id="qty">
+    <option value="1">1 key</option>
+    <option value="5">5 keys</option>
+    <option value="10" selected>10 keys</option>
+    <option value="25">25 keys</option>
+    <option value="50">50 keys</option>
+  </select>
+
+  <button class="btn" id="genBtn" onclick="generateKeys()">Generate & Save to Supabase</button>
+  <div class="status" id="genStatus"></div>
+
+  <div class="result" id="lastResult">
+    <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Last Generated Key</div>
+    <div class="key-text" id="keyDisplay" onclick="copyKey()"></div>
+    <div class="copy-hint" id="copyHint">Click to copy</div>
+  </div>
+
+  <div class="keys-list">
+    <h3>All Keys <span id="keyCount" style="color:#64748b"></span> <button onclick="loadKeys()" style="background:none;border:none;color:#25D366;font-size:9px;cursor:pointer;margin-left:8px;">↻ Refresh</button></h3>
+    <div id="keysList"></div>
+  </div>
+</div>
+
+<script>
+  function randomKey() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    const seg = () => Array.from({length: 5}, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+    return `${seg()}-${seg()}-${seg()}-${seg()}`
+  }
+
+  // INSERT a new license key into Supabase
+  async function supabaseInsert(key, data) {
+    const res = await fetch(`${BASE}/licenses`, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify({ key, ...data })
+    })
+    return res.ok
+  }
+
+  // UPDATE a license key in Supabase
+  async function supabaseUpdate(key, data) {
+    const res = await fetch(`${BASE}/licenses?key=eq.${encodeURIComponent(key)}`, {
+      method: 'PATCH',
+      headers: { ...HEADERS, Prefer: 'return=minimal' },
+      body: JSON.stringify(data)
+    })
+    return res.ok
+  }
+
+  // LIST all license keys from Supabase
+  async function supabaseList() {
+    const res = await fetch(`${BASE}/licenses?select=*&order=created_at.desc`, {
+      headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${SUPABASE.anonKey}` }
+    })
+    if (!res.ok) return []
+    return res.json()
+  }
+
+  async function generateKeys() {
+    const qty = parseInt(document.getElementById('qty').value)
+    const btn = document.getElementById('genBtn')
+    const status = document.getElementById('genStatus')
+    btn.disabled = true
+    status.className = 'status'
+    status.textContent = `Generating ${qty} key(s)...`
+
+    let lastKey = ''
+    let ok = 0
+    for (let i = 0; i < qty; i++) {
+      const key = randomKey()
+      const saved = await supabaseInsert(key, {
+        active: true,
+        machine_id: '',
+        created_at: Date.now(),
+        claimed_at: 0,
+      })
+      if (saved) { ok++; lastKey = key }
+      status.textContent = `Generating... ${i+1}/${qty}`
+    }
+
+    btn.disabled = false
+    if (ok > 0) {
+      status.className = 'status ok'
+      status.textContent = `✓ ${ok} key(s) saved to Supabase`
+      document.getElementById('keyDisplay').textContent = lastKey
+      document.getElementById('lastResult').style.display = 'block'
+      loadKeys()
+    } else {
+      status.className = 'status err'
+      status.textContent = '✗ Failed — check Supabase config & table setup'
+    }
+  }
+
+  async function revokeKey(key) {
+    if (!confirm(`Revoke key ${key}? This will lock out the user.`)) return
+    await supabaseUpdate(key, { active: false })
+    loadKeys()
+  }
+
+  async function loadKeys() {
+    const list = document.getElementById('keysList')
+    const count = document.getElementById('keyCount')
+    list.innerHTML = '<div style="font-size:9px;color:#64748b;padding:8px 0">Loading...</div>'
+    const keys = await supabaseList()
+    count.textContent = `(${keys.length})`
+    if (keys.length === 0) {
+      list.innerHTML = '<div style="font-size:9px;color:#64748b;padding:8px 0">No keys yet</div>'
+      return
+    }
+    list.innerHTML = keys.map(k => {
+      const status = !k.active ? 'disabled' : k.machine_id ? 'claimed' : 'unused'
+      const label = status === 'disabled' ? 'Revoked' : status === 'claimed' ? 'In Use' : 'Available'
+      const machine = k.machine_id ? `<span class="machine" title="${k.machine_id}">${k.machine_id.slice(0,16)}…</span>` : ''
+      const revoke = k.active ? `<button class="revoke-btn" onclick="revokeKey('${k.key}')">Revoke</button>` : ''
+      return `<div class="key-row">
+        <span class="k">${k.key}</span>
+        ${machine}
+        <span class="pill ${status}">${label}</span>
+        ${revoke}
+      </div>`
+    }).join('')
+  }
+
+  function copyKey() {
+    const key = document.getElementById('keyDisplay').textContent
+    navigator.clipboard.writeText(key)
+    const hint = document.getElementById('copyHint')
+    hint.textContent = '✓ Copied!'
+    hint.classList.add('copied')
+    setTimeout(() => { hint.textContent = 'Click to copy'; hint.classList.remove('copied') }, 2000)
+  }
+
+  // Load keys on open
+  loadKeys()
+</script>
+</body>
+</html>

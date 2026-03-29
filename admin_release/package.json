@@ -1,0 +1,40 @@
+{
+  "name": "tomwhats-keygen",
+  "productName": "TomWhatsBulk Keygen",
+  "version": "1.0.0",
+  "description": "TomWhatsBulk License Key Manager — Admin Tool",
+  "main": "main.js",
+  "author": "TomXtractor",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^39.2.6",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.tomxtractor.keygen",
+    "productName": "TomWhatsBulk Keygen",
+    "directories": {
+      "output": "."
+    },
+    "files": [
+      "main.js",
+      "index.html"
+    ],
+    "win": {
+      "target": "nsis",
+      "executableName": "TomWhatsBulkKeygen"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowElevation": false,
+      "runAfterFinish": true,
+      "shortcutName": "TomWhatsBulk Keygen",
+      "createDesktopShortcut": true,
+      "artifactName": "tomwhats-keygen-setup.exe"
+    }
+  }
+}
