@@ -1,1 +1,0 @@
-const fs = require('fs'); let c = fs.readFileSync('src/renderer/src/App.tsx', 'utf8'); c = c.replace(/className=\{w-full h-full p-2  border  rounded outline-none text-\[10px\] font-bold resize-none\}/g, 'className={w-full h-full p-2 border rounded outline-none text-[10px] font-bold resize-none}'); fs.writeFileSync('src/renderer/src/App.tsx', c); console.log('done');
