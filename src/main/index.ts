@@ -60,6 +60,21 @@ if (!isLock) {
     ipcMain.handle('db:clear-contacts', () => db.clearContacts())
     ipcMain.handle('db:get-logs', (_event, campaignId) => db.getLogs(campaignId))
     ipcMain.handle('db:clear-logs', () => db.clearLogs())
+    // Campaigns
+    ipcMain.handle('db:create-campaign', (_event, { name, message, total }) => db.createCampaign(name, message, total))
+    ipcMain.handle('db:get-campaigns', () => db.getCampaigns())
+    ipcMain.handle('db:update-campaign', (_event, { id, data }) => db.updateCampaign(id, data))
+    ipcMain.handle('db:delete-campaign', (_event, id) => db.deleteCampaign(id))
+    ipcMain.handle('db:add-log', (_event, { campaignId, campaignName, phone, status, error }) => db.addLog(campaignId, campaignName, phone, status, error))
+    // Blacklist
+    ipcMain.handle('db:get-blacklist', () => db.getBlacklist())
+    ipcMain.handle('db:add-blacklist', (_event, phones) => db.addToBlacklist(phones))
+    ipcMain.handle('db:remove-blacklist', (_event, phone) => db.removeFromBlacklist(phone))
+    ipcMain.handle('db:clear-blacklist', () => db.clearBlacklist())
+    // Templates
+    ipcMain.handle('db:get-templates', () => db.getTemplates())
+    ipcMain.handle('db:save-template', (_event, { name, message }) => db.saveTemplate(name, message))
+    ipcMain.handle('db:delete-template', (_event, id) => db.deleteTemplate(id))
 
     // License IPC Handlers
     ipcMain.handle('license:check', () => checkLicense())

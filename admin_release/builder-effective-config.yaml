@@ -6,6 +6,7 @@ productName: TomWhatsBulk Keygen
 files:
   - filter:
       - main.js
+      - preload.js
       - index.html
 win:
   target: nsis

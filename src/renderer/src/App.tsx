@@ -240,6 +240,27 @@ function App() {
 
   const [quickPhone, setQuickPhone] = useState('')
   const [isSendingQuick, setIsSendingQuick] = useState(false)
+  const [speedPreset, setSpeedPreset] = useState('normal')
+  const [minDelay, setMinDelay] = useState(45)
+  const [maxDelay, setMaxDelay] = useState(120)
+  const [dailyLimit, setDailyLimit] = useState(300)
+  const [scheduleEnabled, setScheduleEnabled] = useState(false)
+  const [scheduleStart, setScheduleStart] = useState('09:00')
+  const [scheduleEnd, setScheduleEnd] = useState('17:00')
+  const [breakEnabled, setBreakEnabled] = useState(true)
+  const [breakEvery, setBreakEvery] = useState(25)
+  const [breakDuration, setBreakDuration] = useState(10)
+  const [shuffleContacts, setShuffleContacts] = useState(false)
+
+  const applyPreset = (preset: string) => {
+    setSpeedPreset(preset)
+    if (preset === 'safe') { setMinDelay(90); setMaxDelay(180) }
+    else if (preset === 'normal') { setMinDelay(45); setMaxDelay(120) }
+    else { setMinDelay(20); setMaxDelay(45) }
+  }
+  const [simState, setSimState] = useState<'idle' | 'typing' | 'sending' | 'sent'>('idle')
+  const [simTypedText, setSimTypedText] = useState('')
+  const [simPhone, setSimPhone] = useState('')
 
   const handleQuickSend = async () => {
     const api = (window as any).api
@@ -247,16 +268,36 @@ function App() {
     if (!quickPhone.trim()) { setError('Enter a phone number'); return }
     if (!messageTemplate.trim()) { setError('Type a message first'); return }
     setIsSendingQuick(true)
+    setSimPhone(quickPhone.replace(/\D/g, ''))
     try {
       let finalMessage = messageTemplate.replace('{name}', '')
       if (isSmartTwistEnabled) finalMessage = twistMessage(finalMessage, 0.3)
+
+      // Simulate typing character by character
+      setSimState('typing')
+      setSimTypedText('')
+      const typingDelay = Math.min(Math.max(finalMessage.length * 40, 1500), 6000)
+      const charInterval = typingDelay / finalMessage.length
+      for (let i = 0; i <= finalMessage.length; i++) {
+        await new Promise(r => setTimeout(r, charInterval))
+        setSimTypedText(finalMessage.slice(0, i))
+      }
+
+      // Simulate clicking send
+      setSimState('sending')
+      await new Promise(r => setTimeout(r, 600 + Math.random() * 400))
+
       await api.sendMessage({ phone: quickPhone.replace(/\D/g, ''), message: finalMessage })
+      setSimState('sent')
       setSuccess(`Sent to ${quickPhone}`)
       setQuickPhone('')
       await loadData()
+      await new Promise(r => setTimeout(r, 2000))
     } catch (e: any) {
       setError(`Failed: ${e.message}`)
     }
+    setSimState('idle')
+    setSimTypedText('')
     setIsSendingQuick(false)
   }
 
@@ -295,7 +336,26 @@ function App() {
       try {
         let finalMessage = messageTemplate.replace('{name}', contact.name || '')
         if (isSmartTwistEnabled) finalMessage = twistMessage(finalMessage, 0.3)
+
+        // Typing simulation
+        setSimPhone(contact.phone)
+        setSimState("typing")
+        setSimTypedText("")
+        const tMs = Math.min(Math.max(finalMessage.length * 40, 1500), 6000)
+        const cMs = tMs / finalMessage.length
+        for (let ci = 0; ci <= finalMessage.length; ci++) {
+          if (!isSendingRef.current) break
+          await new Promise(r => setTimeout(r, cMs))
+          setSimTypedText(finalMessage.slice(0, ci))
+        }
+        setSimState("sending")
+        await new Promise(r => setTimeout(r, 600))
+
         await api.sendMessage({ phone: contact.phone, message: finalMessage })
+        setSimState("sent")
+        await new Promise(r => setTimeout(r, 1500))
+        setSimState("idle")
+        setSimTypedText("")
         setContactStatuses(prev => ({ ...prev, [contact.phone]: 'sent' }))
         await loadData()
       } catch (e) {
@@ -412,6 +472,42 @@ function App() {
                      </div>
                   </div>
 
+                  {/* Typing Simulation Preview */}
+                  {simState !== "idle" && (
+                    <div className="bg-white rounded border shadow-sm shrink-0 overflow-hidden mb-1.5">
+                      <div className="px-1.5 py-0.5 bg-[#075E54] border-b flex items-center justify-between">
+                        <span className="text-[7px] font-black text-white uppercase tracking-widest">WHATSAPP PREVIEW</span>
+                        <span className="text-[7px] font-black text-[#25D366]">+{simPhone}</span>
+                      </div>
+                      <div className="p-2 bg-[#ECE5DD]">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1 text-[7px] text-gray-500 font-black uppercase mb-1">
+                            {simState === "typing" && <><span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse inline-block" /><span>Typing message...</span></>}
+                            {simState === "sending" && <><span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse inline-block" /><span>Clicking send button...</span></>}
+                            {simState === "sent" && <><span className="w-1.5 h-1.5 rounded-full bg-[#25D366] inline-block" /><span>Message delivered!</span></>}
+                          </div>
+                          <div className="bg-[#DCF8C6] rounded-lg rounded-br-none px-2 py-1.5 max-w-[85%] self-end shadow-sm relative">
+                            <p className="text-[9px] text-gray-800 font-medium whitespace-pre-wrap break-words min-h-[12px]">
+                              {simTypedText}{simState === "typing" && <span className="inline-block w-0.5 h-3 bg-gray-700 animate-pulse ml-0.5 align-middle" />}
+                            </p>
+                            <div className="flex items-center justify-end gap-0.5 mt-0.5">
+                              <span className="text-[6px] text-gray-400">{new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</span>
+                              {simState === "sent" && <CheckCheck className="w-2.5 h-2.5 text-[#34B7F1]" />}
+                              {simState === "sending" && <CheckCheck className="w-2.5 h-2.5 text-gray-400" />}
+                            </div>
+                          </div>
+                          {simState === "sending" && (
+                            <div className="flex justify-end mt-1">
+                              <div className="bg-[#00A884] text-white text-[7px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 animate-bounce">
+                                <span>SEND</span><span>→</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Contact Queue List */}
                   <div className="bg-white rounded border flex flex-col overflow-hidden shadow-sm flex-1">
                      <div className="px-1.5 py-1 border-b bg-[#F0F2F5] shrink-0 flex items-center justify-between">
@@ -460,12 +556,93 @@ function App() {
                </section>
              )}
 
-             {activeTab !== 'campaign' && activeTab !== 'generator' && activeTab !== 'history' && (
-               <section className="flex-1 flex flex-col bg-white rounded border p-3 items-center justify-center text-gray-400">
-                  <span className="font-black text-[10px] uppercase tracking-widest">{activeTab} MODULE</span>
-                  <span className="text-[8px] mt-1 text-center">Coming soon.</span>
-               </section>
-             )}
+             {activeTab !== 'campaign' && activeTab !== 'generator' && activeTab !== 'history' && activeTab !== 'settings' && (
+                <section className="flex-1 flex flex-col bg-white rounded border p-3 items-center justify-center text-gray-400">
+                   <span className="font-black text-[10px] uppercase tracking-widest">{activeTab} MODULE</span>
+                   <span className="text-[8px] mt-1 text-center">Coming soon.</span>
+                </section>
+              )}
+
+              {activeTab === 'settings' && (
+                <section className="flex-1 flex flex-col gap-1.5 min-w-0 overflow-hidden">
+                  <div className="bg-white rounded border p-3 flex flex-col gap-3 shadow-sm overflow-y-auto flex-1">
+                    <span className="font-black text-[10px] text-gray-400 uppercase tracking-widest">Send Settings</span>
+
+                    <div>
+                      <span className="text-[7px] font-black text-gray-400 uppercase block mb-1.5">Speed Preset</span>
+                      <div className="flex gap-1.5">
+                        {(['safe','normal','fast'] as const).map(p => (
+                          <button key={p} onClick={() => applyPreset(p)} className={`flex-1 py-1.5 rounded text-[8px] font-black uppercase border transition-all ${speedPreset === p ? 'bg-[#00A884] text-white border-[#00A884]' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
+                            {p === 'safe' ? 'Safe' : p === 'normal' ? 'Normal' : 'Fast'}
+                          </button>
+                        ))}
+                      </div>
+                      <span className="text-[6px] text-gray-300 mt-1 block">{speedPreset === 'safe' ? '90-180s - Safest' : speedPreset === 'normal' ? '45-120s - Balanced' : '20-45s - Fastest'}</span>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <div className="flex flex-col gap-1 flex-1">
+                        <span className="text-[7px] font-black text-gray-400 uppercase">Min Delay (sec)</span>
+                        <input type="number" value={minDelay} onChange={e => setMinDelay(parseInt(e.target.value)||30)} className="w-full p-1.5 border rounded text-[9px] font-bold outline-none focus:border-[#00A884]" />
+                      </div>
+                      <div className="flex flex-col gap-1 flex-1">
+                        <span className="text-[7px] font-black text-gray-400 uppercase">Max Delay (sec)</span>
+                        <input type="number" value={maxDelay} onChange={e => setMaxDelay(parseInt(e.target.value)||120)} className="w-full p-1.5 border rounded text-[9px] font-bold outline-none focus:border-[#00A884]" />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[7px] font-black text-gray-400 uppercase">Daily Send Limit</span>
+                      <div className="flex items-center gap-2">
+                        <input type="number" value={dailyLimit} onChange={e => setDailyLimit(parseInt(e.target.value)||300)} className="flex-1 p-1.5 border rounded text-[9px] font-bold outline-none focus:border-[#00A884]" />
+                        <span className="text-[7px] text-gray-400 shrink-0">msgs/day</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[7px] font-black text-gray-400 uppercase">Schedule (send only between)</span>
+                        <button onClick={() => setScheduleEnabled(!scheduleEnabled)} className={`w-7 h-3.5 rounded-full relative ${scheduleEnabled ? 'bg-[#00A884]' : 'bg-gray-300'}`}><div className={`absolute top-0.5 w-2.5 h-2.5 bg-white rounded-full transition-transform ${scheduleEnabled ? 'left-4' : 'left-0.5'}`} /></button>
+                      </div>
+                      {scheduleEnabled && (
+                        <div className="flex gap-2">
+                          <input type="time" value={scheduleStart} onChange={e => setScheduleStart(e.target.value)} className="flex-1 p-1.5 border rounded text-[9px] font-bold outline-none focus:border-[#00A884]" />
+                          <input type="time" value={scheduleEnd} onChange={e => setScheduleEnd(e.target.value)} className="flex-1 p-1.5 border rounded text-[9px] font-bold outline-none focus:border-[#00A884]" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[7px] font-black text-gray-400 uppercase">Auto Breaks</span>
+                        <button onClick={() => setBreakEnabled(!breakEnabled)} className={`w-7 h-3.5 rounded-full relative ${breakEnabled ? 'bg-[#00A884]' : 'bg-gray-300'}`}><div className={`absolute top-0.5 w-2.5 h-2.5 bg-white rounded-full transition-transform ${breakEnabled ? 'left-4' : 'left-0.5'}`} /></button>
+                      </div>
+                      {breakEnabled && (
+                        <div className="flex gap-2">
+                          <div className="flex-1"><span className="text-[6px] text-gray-400">Every N msgs</span><input type="number" value={breakEvery} onChange={e => setBreakEvery(parseInt(e.target.value)||25)} className="w-full p-1.5 border rounded text-[9px] font-bold outline-none focus:border-[#00A884]" /></div>
+                          <div className="flex-1"><span className="text-[6px] text-gray-400">Break (min)</span><input type="number" value={breakDuration} onChange={e => setBreakDuration(parseInt(e.target.value)||10)} className="w-full p-1.5 border rounded text-[9px] font-bold outline-none focus:border-[#00A884]" /></div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-[7px] font-black text-gray-400 uppercase">Shuffle Contact Order</span>
+                      <button onClick={() => setShuffleContacts(!shuffleContacts)} className={`w-7 h-3.5 rounded-full relative ${shuffleContacts ? 'bg-[#00A884]' : 'bg-gray-300'}`}><div className={`absolute top-0.5 w-2.5 h-2.5 bg-white rounded-full transition-transform ${shuffleContacts ? 'left-4' : 'left-0.5'}`} /></button>
+                    </div>
+
+                    <div className="border-t pt-3 flex flex-col gap-1">
+                      <span className="font-black text-[9px] text-gray-500 uppercase">Anti-Ban Tips</span>
+                      <ul className="text-[7px] text-gray-400 space-y-1 list-disc pl-3">
+                        <li>Use numbers at least 3 months old</li>
+                        <li>Start with 50/day, increase gradually</li>
+                        <li>Keep Smart Twist ON always</li>
+                        <li>Enable auto breaks</li>
+                        <li>Use schedule to send during business hours only</li>
+                      </ul>
+                    </div>
+                  </div>
+                </section>
+              )}
 
              {activeTab === 'history' && (
                <section className="flex-1 flex flex-col gap-1.5 min-w-0 overflow-hidden">

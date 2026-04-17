@@ -1,0 +1,1 @@
+﻿const fs=require("fs");let c=fs.readFileSync("src/renderer/src/App.tsx","utf8");const lines=c.split("\n");const idx=lines.findIndex(l=>l.includes("await api.sendMessage")&&l.includes("contact.phone"));console.log("idx:",idx,"line:",lines[idx]);

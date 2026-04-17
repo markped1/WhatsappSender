@@ -6,7 +6,7 @@ export default defineConfig({
   main: {
     build: {
       rollupOptions: {
-        external: ['sql.js']
+        external: ['sql.js', 'bufferutil', 'utf-8-validate', 'node-machine-id']
       }
     }
   },

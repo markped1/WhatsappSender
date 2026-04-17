@@ -7,116 +7,97 @@ let db: Database;
 const dbPath = path.join(app.getPath('userData'), 'whatsapp_bulk.sqlite');
 
 export async function initDatabase() {
-  console.log('[DB] Initializing database...');
-  
   const wasmPath = app.isPackaged
     ? path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm')
     : path.resolve(__dirname, '../../node_modules/sql.js/dist/sql-wasm.wasm');
 
-  console.log('[DB] Looking for WASM at:', wasmPath);
-  
-  if (!fs.existsSync(wasmPath)) {
-    console.warn('[DB] WASM not found at primary path, trying secondary...');
-    // Fallback for some dev environments
-    const fallbackPath = path.resolve(process.cwd(), 'node_modules/sql.js/dist/sql-wasm.wasm');
-    if (fs.existsSync(fallbackPath)) {
-       console.log('[DB] Found WASM at fallback:', fallbackPath);
-       // Use it? But wait, initSqlJs locateFile will use this.
-    } else {
-       console.error('[DB] CRITICAL: sql-wasm.wasm not found anywhere!');
-    }
-  }
-
   try {
-    const SQL = await initSqlJs({
-      locateFile: (file: string) => {
-        if (file === 'sql-wasm.wasm') return wasmPath;
-        return file;
-      }
-    });
-    
-    console.log('[DB] SQL.js initialized. Path:', dbPath);
-    
+    const SQL = await initSqlJs({ locateFile: (f: string) => f === 'sql-wasm.wasm' ? wasmPath : f });
     if (fs.existsSync(dbPath)) {
-      const fileBuffer = fs.readFileSync(dbPath);
-      db = new SQL.Database(fileBuffer);
-      console.log('[DB] Existing database loaded.');
+      db = new SQL.Database(fs.readFileSync(dbPath));
     } else {
       db = new SQL.Database();
-      createTables();
-      saveDatabase();
-      console.log('[DB] New database created.');
     }
+    createTables();
+    saveDatabase();
+    console.log('[DB] Ready');
   } catch (err: any) {
-    console.error('[DB] Initialization failed:', err.message);
+    console.error('[DB] Failed:', err.message);
     throw err;
   }
 }
 
 function createTables() {
-  // Contacts table
-  db.run(`
-    CREATE TABLE IF NOT EXISTS contacts (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      phone TEXT UNIQUE,
-      name TEXT,
-      status TEXT DEFAULT 'pending', -- pending, active, invalid
-      added_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+  db.run(`CREATE TABLE IF NOT EXISTS contacts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    phone TEXT UNIQUE, name TEXT,
+    status TEXT DEFAULT 'pending',
+    added_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
 
-  // Campaigns table
-  db.run(`
-    CREATE TABLE IF NOT EXISTS campaigns (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT,
-      message TEXT,
-      total_contacts INTEGER,
-      sent_count INTEGER DEFAULT 0,
-      status TEXT DEFAULT 'draft', -- draft, running, paused, completed
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+  db.run(`CREATE TABLE IF NOT EXISTS campaigns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    message TEXT,
+    total_contacts INTEGER DEFAULT 0,
+    sent_count INTEGER DEFAULT 0,
+    failed_count INTEGER DEFAULT 0,
+    last_sent_phone TEXT,
+    status TEXT DEFAULT 'draft',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    completed_at DATETIME
+  )`);
 
-  // Logs table
-  db.run(`
-    CREATE TABLE IF NOT EXISTS logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      campaign_id INTEGER,
-      phone TEXT,
-      status TEXT, -- sent, failed, rejected
-      error TEXT,
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(campaign_id) REFERENCES campaigns(id)
-    )
-  `);
+  db.run(`CREATE TABLE IF NOT EXISTS logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    campaign_id INTEGER,
+    campaign_name TEXT,
+    phone TEXT,
+    status TEXT,
+    error TEXT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(campaign_id) REFERENCES campaigns(id)
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS blacklist (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    phone TEXT UNIQUE,
+    reason TEXT,
+    added_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    message TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
 }
 
 export function saveDatabase() {
-  const data = db.export();
-  const buffer = Buffer.from(data);
-  fs.writeFileSync(dbPath, buffer);
+  fs.writeFileSync(dbPath, Buffer.from(db.export()));
 }
 
-// Database operations
-export function addContacts(contacts: { phone: string, name?: string }[]) {
+function toRows(res: any[]) {
+  if (res.length === 0) return [];
+  const cols = res[0].columns;
+  return res[0].values.map((row: any[]) => {
+    const obj: Record<string, any> = {};
+    cols.forEach((c: string, i: number) => obj[c] = row[i]);
+    return obj;
+  });
+}
+
+// ── Contacts ──
+export function addContacts(contacts: { phone: string; name?: string }[]) {
   const stmt = db.prepare('INSERT OR IGNORE INTO contacts (phone, name) VALUES (?, ?)');
-  for (const contact of contacts) {
-    stmt.run([contact.phone, contact.name || null]);
-  }
+  for (const c of contacts) stmt.run([c.phone, c.name || null]);
   stmt.free();
   saveDatabase();
 }
 
 export function getContacts() {
-  const res = db.exec('SELECT * FROM contacts ORDER BY added_at DESC');
-  if (res.length === 0) return [];
-  const columns = res[0].columns;
-  return res[0].values.map(row => {
-    const obj = {};
-    columns.forEach((col, i) => obj[col] = row[i]);
-    return obj;
-  });
+  return toRows(db.exec('SELECT * FROM contacts ORDER BY added_at DESC'));
 }
 
 export function updateContactStatus(phone: string, status: string) {
@@ -129,32 +110,91 @@ export function clearContacts() {
   saveDatabase();
 }
 
-export function addLog(campaignId: number, phone: string, status: string, error?: string) {
-  db.run('INSERT INTO logs (campaign_id, phone, status, error) VALUES (?, ?, ?, ?)', 
-    [campaignId, phone, status, error || null]);
+// ── Campaigns ──
+export function createCampaign(name: string, message: string, totalContacts: number): number {
+  db.run('INSERT INTO campaigns (name, message, total_contacts) VALUES (?, ?, ?)', [name, message, totalContacts]);
+  const res = db.exec('SELECT last_insert_rowid() as id');
+  saveDatabase();
+  return res[0].values[0][0] as number;
+}
+
+export function getCampaigns() {
+  return toRows(db.exec('SELECT * FROM campaigns ORDER BY created_at DESC'));
+}
+
+export function updateCampaign(id: number, data: { sentCount?: number; failedCount?: number; status?: string; lastSentPhone?: string; completedAt?: string }) {
+  const parts: string[] = [];
+  const vals: any[] = [];
+  if (data.sentCount !== undefined) { parts.push('sent_count = ?'); vals.push(data.sentCount); }
+  if (data.failedCount !== undefined) { parts.push('failed_count = ?'); vals.push(data.failedCount); }
+  if (data.status !== undefined) { parts.push('status = ?'); vals.push(data.status); }
+  if (data.lastSentPhone !== undefined) { parts.push('last_sent_phone = ?'); vals.push(data.lastSentPhone); }
+  if (data.completedAt !== undefined) { parts.push('completed_at = ?'); vals.push(data.completedAt); }
+  if (parts.length === 0) return;
+  vals.push(id);
+  db.run(`UPDATE campaigns SET ${parts.join(', ')} WHERE id = ?`, vals);
+  saveDatabase();
+}
+
+export function deleteCampaign(id: number) {
+  db.run('DELETE FROM logs WHERE campaign_id = ?', [id]);
+  db.run('DELETE FROM campaigns WHERE id = ?', [id]);
+  saveDatabase();
+}
+
+// ── Logs ──
+export function addLog(campaignId: number, campaignName: string, phone: string, status: string, error?: string) {
+  db.run('INSERT INTO logs (campaign_id, campaign_name, phone, status, error) VALUES (?, ?, ?, ?, ?)',
+    [campaignId, campaignName, phone, status, error || null]);
   saveDatabase();
 }
 
 export function getLogs(campaignId?: number) {
-  let sql = 'SELECT * FROM logs';
-  const params: any[] = [];
-  if (campaignId) {
-    sql += ' WHERE campaign_id = ?';
-    params.push(campaignId);
-  }
-  sql += ' ORDER BY timestamp DESC LIMIT 500';
-  
-  const res = db.exec(sql, params);
-  if (res.length === 0) return [];
-  const columns = res[0].columns;
-  return res[0].values.map(row => {
-    const obj = {};
-    columns.forEach((col, i) => obj[col] = row[i]);
-    return obj;
-  });
+  const sql = campaignId
+    ? 'SELECT * FROM logs WHERE campaign_id = ? ORDER BY timestamp DESC LIMIT 500'
+    : 'SELECT * FROM logs ORDER BY timestamp DESC LIMIT 500';
+  return toRows(db.exec(sql, campaignId ? [campaignId] : []));
 }
 
 export function clearLogs() {
   db.run('DELETE FROM logs');
+  saveDatabase();
+}
+
+// ── Blacklist ──
+export function addToBlacklist(phones: string[], reason = 'manual') {
+  const stmt = db.prepare('INSERT OR IGNORE INTO blacklist (phone, reason) VALUES (?, ?)');
+  for (const p of phones) stmt.run([p, reason]);
+  stmt.free();
+  saveDatabase();
+}
+
+export function getBlacklist(): string[] {
+  const res = toRows(db.exec('SELECT phone FROM blacklist'));
+  return res.map((r: any) => r.phone);
+}
+
+export function removeFromBlacklist(phone: string) {
+  db.run('DELETE FROM blacklist WHERE phone = ?', [phone]);
+  saveDatabase();
+}
+
+export function clearBlacklist() {
+  db.run('DELETE FROM blacklist');
+  saveDatabase();
+}
+
+// ── Templates ──
+export function saveTemplate(name: string, message: string) {
+  db.run('INSERT INTO templates (name, message) VALUES (?, ?)', [name, message]);
+  saveDatabase();
+}
+
+export function getTemplates() {
+  return toRows(db.exec('SELECT * FROM templates ORDER BY created_at DESC'));
+}
+
+export function deleteTemplate(id: number) {
+  db.run('DELETE FROM templates WHERE id = ?', [id]);
   saveDatabase();
 }
